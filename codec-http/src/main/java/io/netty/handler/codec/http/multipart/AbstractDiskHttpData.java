@@ -198,12 +198,13 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(File file) throws IOException {
+        long size = file.length();
+        checkSize(size);
+        this.size = size;
         if (this.file != null) {
             delete();
         }
         this.file = file;
-        size = file.length();
-        checkSize(size);
         isRenamed = true;
         setCompleted();
     }
@@ -299,15 +300,17 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         int read = 0;
         ByteBuffer byteBuffer = ByteBuffer.allocate(length);
-        while (read < length) {
-            int readnow = fileChannel.read(byteBuffer);
-            if (readnow == -1) {
-                fileChannel.close();
-                fileChannel = null;
-                break;
-            } else {
+        try {
+            while (read < length) {
+                int readnow = fileChannel.read(byteBuffer);
+                if (readnow == -1) {
+                    break;
+                }
                 read += readnow;
             }
+        } finally {
+            fileChannel.close();
+            fileChannel = null;
         }
         if (read == 0) {
             return EMPTY_BUFFER;
